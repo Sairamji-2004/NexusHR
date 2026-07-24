@@ -1,0 +1,12 @@
+target/
+*.class
+.idea/
+*.iml
+.eclipse/
+.classpath
+.project
+.settings/
+.env
+*.log
+node_modules/
+dist/

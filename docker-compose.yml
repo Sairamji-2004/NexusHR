@@ -1,0 +1,147 @@
+version: "3.9"
+
+networks:
+  nexushr-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  kafka_data:
+  elasticsearch_data:
+
+services:
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: nexushr-postgres
+    environment:
+      POSTGRES_DB: nexushr
+      POSTGRES_USER: nexushr_user
+      POSTGRES_PASSWORD: nexushr_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres-init.sql:/docker-entrypoint-initdb.d/01-init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexushr_user -d nexushr"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nexushr-net
+    restart: unless-stopped
+
+
+  redis:
+    image: redis:7-alpine
+    container_name: nexushr-redis
+    command: redis-server --requirepass nexushr_redis --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "nexushr_redis", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nexushr-net
+    restart: unless-stopped
+
+
+  kafka:
+    image: confluentinc/cp-kafka:7.7.0
+    container_name: nexushr-kafka
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      CLUSTER_ID: nexushr-kafka-cluster-001
+    ports:
+      - "9092:9092"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - nexushr-net
+    restart: unless-stopped
+
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: nexushr-kafka-ui
+    environment:
+      KAFKA_CLUSTERS_0_NAME: nexushr-local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    ports:
+      - "8090:8080"
+    depends_on:
+      - kafka
+    networks:
+      - nexushr-net
+
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0
+    container_name: nexushr-keycloak
+    command: start-dev
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin123
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/nexushr
+      KC_DB_USERNAME: nexushr_user
+      KC_DB_PASSWORD: nexushr_pass
+      KC_DB_SCHEMA: keycloak
+      KC_HOSTNAME_STRICT: "false"
+      KC_HTTP_ENABLED: "true"
+    ports:
+      - "9090:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - nexushr-net
+    restart: unless-stopped
+
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
+    container_name: nexushr-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - nexushr-net
+    restart: unless-stopped
+
+
+  leave-service:
+    build:
+      context: ./leave-service
+    container_name: nexushr-leave-service
+    ports:
+      - "8087:8087"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - nexushr-net
+    restart: unless-stopped

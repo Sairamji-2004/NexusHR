@@ -1,0 +1,84 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:nexushr_redis}
+  cloud:
+    gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowed-origins:
+              - "http://localhost:3000"
+            allowed-methods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
+            allowed-headers: ["*"]
+            allow-credentials: true
+      routes:
+        - id: auth-service
+          uri: http://${AUTH_SERVICE_HOST:localhost}:8081
+          predicates:
+            - Path=/api/v1/auth/**
+        - id: employee-service
+          uri: http://${EMPLOYEE_SERVICE_HOST:localhost}:8082
+          predicates:
+            - Path=/api/v1/employees/**,/api/v1/departments/**
+          filters:
+            - name: AuthFilter
+        - id: attendance-service
+          uri: http://${ATTENDANCE_SERVICE_HOST:localhost}:8083
+          predicates:
+            - Path=/api/v1/attendance/**,/api/v1/leaves/**
+          filters:
+            - name: AuthFilter
+        - id: payroll-service
+          uri: http://${PAYROLL_SERVICE_HOST:localhost}:8084
+          predicates:
+            - Path=/api/v1/payroll/**,/api/v1/payslips/**
+          filters:
+            - name: AuthFilter
+        - id: performance-service
+          uri: http://${PERFORMANCE_SERVICE_HOST:localhost}:8085
+          predicates:
+            - Path=/api/v1/performance/**,/api/v1/goals/**
+          filters:
+            - name: AuthFilter
+        - id: notification-service
+          uri: http://${NOTIFICATION_SERVICE_HOST:localhost}:8086
+          predicates:
+            - Path=/api/v1/notifications/**
+          filters:
+            - name: AuthFilter
+        - id: ai-service
+          uri: http://${AI_SERVICE_HOST:localhost}:8087
+          predicates:
+            - Path=/api/v1/ai/**
+          filters:
+            - name: AuthFilter
+
+jwt:
+  secret: ${JWT_SECRET:nexushr-secret-key-change-in-production-minimum-256-bits}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+logging:
+  level:
+    com.amdox.nexushr: DEBUG
+
+  spring:
+cloud:
+gateway:
+routes:
+   - id: leave-service
+uri: http://localhost:8087
+predicates:
+- Path=/api/leaves/**
