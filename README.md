@@ -1,21 +1,23 @@
-# NexusHR Frontend
+# NexusHR - Enterprise HR Management System
 
-React + Vite. Talks to Auth/Employee (port 8081) and Payroll (port 8084).
+NexusHR is an Enterprise Human Resource Management System built using **Spring Boot Microservices** and **React.js**.
 
-## Setup
-```
-npm install
-npm run dev
-```
-Opens on http://localhost:5173
+The system provides complete HR operations including employee management, attendance tracking, leave management, payroll processing, performance reviews, and notifications with secure JWT authentication.
 
-## Before it works with your real backend
-- `src/context/AuthContext.jsx` — adjust the shape of the login response to match your actual Auth service's JSON (currently expects `{ token }` or `{ data: { token } }`).
-- `src/api/api.js` — update `AUTH_API` / `EMPLOYEE_API` if your Auth+Employee endpoints differ from `/api/auth` and `/api/employees`.
-- CORS: make sure the Auth (8081) and Payroll (8084) services both allow origin `http://localhost:5173`.
+---
 
-## Pages
-- `/login` — sign in, stores JWT in localStorage
-- `/dashboard` — landing page after login
-- `/employees` — employee list from Employee service
-- `/payroll` — generate payroll + view all payslips
+## 🚀 Features
+
+- 🔐 Authentication & JWT Security
+- 👨‍💼 Employee Management
+- ⏰ Attendance Tracking
+- 📝 Leave Management
+- 💰 Payroll Processing
+- ⭐ Performance Reviews
+- 🔔 Notification System
+- 🤖 AI Service Integration
+- 🐳 Docker Container Support
+
+---
+
+# 🏗️ System Architecture
